@@ -13,14 +13,20 @@ export class Result<T, E = Error> implements Iterable<T> {
 	static err<T, E = Error>(error: E): Result<T, E> {
 		return err(error);
 	}
-	static trycatch<T, E = Error>(fn: () => (Promise<T> | T)): Promise<Result<T, E>> | Result<T, E> {
+	static trycatch<F extends () => MaybePromise<unknown>, E = Error>(
+		fn: F,
+	): TryCatchReturnType<F, E> {
 		return trycatch(fn);
 	}
 
 	private _value: T | ErrSecret = OK_SECRET;
 	private _error: E | ErrSecret = ERR_SECRET;
 
-	constructor(createSecret: CreateSecret, value: T | OkSecret, error: E | ErrSecret) {
+	constructor(
+		createSecret: CreateSecret,
+		value: T | OkSecret,
+		error: E | ErrSecret,
+	) {
 		if (createSecret !== CREATE_SECRET) {
 			throw new TypeError(
 				"Results can only be created with the ok or err functions",
@@ -86,7 +92,10 @@ export class Result<T, E = Error> implements Iterable<T> {
 		}
 		return err<U, E>(this._error as E);
 	}
-	flatMapOr<U>(fn: (value: T) => Result<U, E>, def: Result<U, E>): Result<U, E> {
+	flatMapOr<U>(
+		fn: (value: T) => Result<U, E>,
+		def: Result<U, E>,
+	): Result<U, E> {
 		if (this.isOk()) {
 			return fn(this._value as T);
 		}
@@ -200,31 +209,45 @@ class ResultIterator<T> implements Iterator<T> {
 	}
 }
 
+export type MaybePromise<T> = Promise<T> | T;
+export type TryCatchReturnType<
+	F extends () => MaybePromise<unknown>,
+	E = Error,
+> = ReturnType<F> extends Promise<infer T>
+	? Promise<Result<T, E>>
+	: Result<ReturnType<F>, E>;
+
 export function ok<T, E = Error>(value: T): Result<T, E> {
 	return new Result(CREATE_SECRET, value, ERR_SECRET);
 }
-export function err<T, E = Error>(error: E): Result<T, E> { return new Result(CREATE_SECRET, OK_SECRET, error); }
-export function trycatch<T, E = Error>(fn: () => (Promise<T> | T)): Promise<Result<T, E>> | Result<T, E> {
+export function err<T, E = Error>(error: E): Result<T, E> {
+	return new Result(CREATE_SECRET, OK_SECRET, error);
+}
+export function trycatch<
+	T,
+	F extends () => MaybePromise<T> = () => MaybePromise<T>,
+	E = Error,
+>(fn: F): TryCatchReturnType<F, E> {
 	try {
 		const result = fn();
 		if (isPromiseLike(result)) {
 			let promise = result.then(ok);
-			if (typeof result.catch === 'function') {
+			if ("catch" in promise && typeof promise.catch === "function") {
 				promise = promise.catch(err) as never;
 			}
-			return promise as Promise<Result<T, E>>;
+			return promise as never;
 		}
-		return ok(result);
+		return ok(result) as never;
 	} catch (error) {
-		return err(error as E);
+		return err(error as E) as never;
 	}
 }
 
 function isPromiseLike<T>(value: unknown): value is PromiseLike<T> {
 	return (
-		typeof value === 'object' &&
 		value !== null &&
+		typeof value === "object" &&
 		// biome-ignore lint/suspicious/noExplicitAny: check then function
-		typeof (value as any).then === 'function'
+		typeof (value as any).then === "function"
 	);
 }

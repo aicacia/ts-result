@@ -157,15 +157,29 @@ tape("Result", async (assert: tape.Test) => {
 	}
 	assert.equal(loopedOverErr, false, "should not loop over err result");
 
-	assert.deepEqual(trycatch(() => true), ok(true));
-	assert.deepEqual(trycatch(() => {
-		throw TEST_ERROR;
-	}), err(TEST_ERROR));
+	assert.deepEqual(
+		trycatch(() => true),
+		ok(true),
+	);
+	assert.deepEqual(
+		trycatch(() => {
+			throw TEST_ERROR;
+		}),
+		err(TEST_ERROR),
+	);
 
-	assert.deepEqual(await trycatch(async () => new Promise(resolve => resolve(true))), ok(true));
-	assert.deepEqual(await trycatch(() =>
-		new Promise((_resolve, reject) => reject(TEST_ERROR))
-	), err(TEST_ERROR));
+	assert.deepEqual(
+		await trycatch(
+			async () => new Promise<boolean>((resolve) => resolve(true)),
+		),
+		ok(true),
+	);
+	assert.deepEqual(
+		await trycatch(
+			() => new Promise<void>((_resolve, reject) => reject(TEST_ERROR)),
+		),
+		err(TEST_ERROR),
+	);
 
 	assert.end();
 });
