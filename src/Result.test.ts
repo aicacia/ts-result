@@ -181,5 +181,16 @@ tape("Result", async (assert: tape.Test) => {
 		err(TEST_ERROR),
 	);
 
+	assert.deepEqual(
+		await Result.try(new Promise<boolean>((resolve) => resolve(true))),
+		ok(true),
+	);
+	assert.deepEqual(
+		await Result.try(
+			new Promise<void>((_resolve, reject) => reject(TEST_ERROR)),
+		),
+		err(TEST_ERROR),
+	);
+
 	assert.end();
 });

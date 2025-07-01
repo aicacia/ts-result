@@ -18,6 +18,9 @@ export class Result<T, E = Error> implements Iterable<T> {
 	): TryCatchReturnType<F, E> {
 		return trycatch(fn);
 	}
+	static try<T, E = Error>(result: MaybePromiseLike<T>) {
+		return tryresult<T, E>(result);
+	}
 
 	private _value: T | ErrSecret = OK_SECRET;
 	private _error: E | ErrSecret = ERR_SECRET;
@@ -223,21 +226,23 @@ export function ok<T, E = Error>(value: T): Result<T, E> {
 export function err<T, E = Error>(error: E): Result<T, E> {
 	return new Result(CREATE_SECRET, OK_SECRET, error);
 }
+export function tryresult<T, E = Error>(result: MaybePromiseLike<T>) {
+	if (isPromiseLike(result)) {
+		let promise = result.then(ok);
+		if ("catch" in promise && typeof promise.catch === "function") {
+			promise = promise.catch(err);
+		}
+		return promise as Promise<Result<T, E>>;
+	}
+	return ok(result) as Result<T, E>;
+}
 export function trycatch<
 	T,
 	F extends () => MaybePromiseLike<T> = () => MaybePromiseLike<T>,
 	E = Error,
 >(fn: F): TryCatchReturnType<F, E> {
 	try {
-		const result = fn();
-		if (isPromiseLike(result)) {
-			let promise = result.then(ok);
-			if ("catch" in promise && typeof promise.catch === "function") {
-				promise = promise.catch(err) as never;
-			}
-			return promise as never;
-		}
-		return ok(result) as never;
+		return tryresult(fn()) as never;
 	} catch (error) {
 		return err(error as E) as never;
 	}

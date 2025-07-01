@@ -1,6 +1,6 @@
 {
 	"name": "@aicacia/result",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "rust like result class",
 	"repository": {
 		"type": "git",
