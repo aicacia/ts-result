@@ -13,7 +13,7 @@ export class Result<T, E = Error> implements Iterable<T> {
 	static err<T, E = Error>(error: E): Result<T, E> {
 		return err(error);
 	}
-	static trycatch<F extends () => MaybePromise<unknown>, E = Error>(
+	static trycatch<F extends () => MaybePromiseLike<unknown>, E = Error>(
 		fn: F,
 	): TryCatchReturnType<F, E> {
 		return trycatch(fn);
@@ -209,12 +209,12 @@ class ResultIterator<T> implements Iterator<T> {
 	}
 }
 
-export type MaybePromise<T> = Promise<T> | T;
+export type MaybePromiseLike<T> = PromiseLike<T> | T;
 export type TryCatchReturnType<
-	F extends () => MaybePromise<unknown>,
+	F extends () => MaybePromiseLike<unknown>,
 	E = Error,
-> = ReturnType<F> extends Promise<infer T>
-	? Promise<Result<T, E>>
+> = ReturnType<F> extends PromiseLike<infer T>
+	? PromiseLike<Result<T, E>>
 	: Result<ReturnType<F>, E>;
 
 export function ok<T, E = Error>(value: T): Result<T, E> {
@@ -225,7 +225,7 @@ export function err<T, E = Error>(error: E): Result<T, E> {
 }
 export function trycatch<
 	T,
-	F extends () => MaybePromise<T> = () => MaybePromise<T>,
+	F extends () => MaybePromiseLike<T> = () => MaybePromiseLike<T>,
 	E = Error,
 >(fn: F): TryCatchReturnType<F, E> {
 	try {
